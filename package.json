@@ -1,0 +1,36 @@
+{
+  "name": "mina-wallet-adapter-starter-react",
+  "version": "0.1.0",
+  "description": "Starter template for building zkApps with Mina Wallet Adapter using React",
+  "license": "Apache-2.0",
+  "type": "module",
+  "private": "true",
+  "workspaces": [
+    "contracts",
+    "ui"
+  ],
+  "scripts": {
+    "predev": "npm run build --workspace contracts",
+    "dev": "npm run start --workspace ui",
+    "build": "npm run build --workspaces --if-present",
+    "preview": "npm run preview --workspace ui",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mina-wallet-adapter/starter-kit-react.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mina-wallet-adapter/starter-kit-react/issues"
+  },
+  "homepage": "https://github.com/mina-wallet-adapter/starter-kit-react#readme",
+  "keywords": [
+    "mina-wallet-adapter",
+    "starter",
+    "react",
+    "create-react-app",
+    "zkApp"
+  ]
+}
