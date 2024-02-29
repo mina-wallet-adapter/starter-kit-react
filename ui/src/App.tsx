@@ -1,10 +1,13 @@
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useState, useMemo, useCallback } from "react";
+import { MINA_BERKELEY_CHAIN } from "mina-wallet-standard";
 import {
+  AdapterId,
   WalletProvider,
   WalletMultiButton,
   useWallet,
 } from "@mina-wallet-adapter/ui-react";
 import "@mina-wallet-adapter/ui-react/dist/wallet-adapter.css";
+import * as zk from "./zkapp";
 import "./App.css";
 
 export default App;
@@ -18,16 +21,20 @@ function App() {
 }
 
 function AppContext({ children }: { children: ReactNode }) {
-  return <WalletProvider autoConnect={true}>{children}</WalletProvider>;
+  const adapters = useMemo(
+    () => [AdapterId.AURO, AdapterId.LEDGER, AdapterId.METAMASK_SNAP],
+    []
+  );
+
+  return (
+    <WalletProvider adapters={adapters} autoConnect={true}>
+      {children}
+    </WalletProvider>
+  );
 }
 
 function Content() {
-  const [value] = useState(0);
   const { connected } = useWallet();
-
-  function submit() {
-    alert("This feature is WIP.");
-  }
 
   return (
     <main>
@@ -58,18 +65,7 @@ function Content() {
 
         <div className="callout">
           {connected ? (
-            <>
-              <p>
-                On-chain state: <strong>{value}</strong>
-              </p>
-              <p>Click below button to add 2 to the on-chain state.</p>
-              <button
-                className="wallet-adapter-button wallet-adapter-button-trigger"
-                onClick={submit}
-              >
-                Add 2
-              </button>
-            </>
+            <ContentAfterConnection />
           ) : (
             <>
               <p className="warning">No wallet connected</p>
@@ -108,5 +104,102 @@ function Content() {
         </p>
       </footer>
     </main>
+  );
+}
+
+function ContentAfterConnection() {
+  const { name, chain, publicKey, signAndSendTransaction } = useWallet();
+  const [value, setValue] = useState(0);
+  const [txnId, setTxnId] = useState("");
+  const [statusMsg, setStatusMsg] = useState("");
+
+  const zkInitialized = useMemo(() => {
+    zk.initContract();
+    return true;
+  }, [zk]);
+
+  const getValue = useCallback(async () => {
+    const value = await zk!.getOnChainValue();
+    setValue(value);
+  }, [zkInitialized, zk]);
+
+  const submit = useCallback(
+    async (e: { currentTarget: any }) => {
+      const button = e.currentTarget;
+
+      try {
+        setTxnId("");
+        button.disabled = true;
+        button.style.cursor = "wait";
+        document.body.style.cursor = "wait";
+
+        setStatusMsg(
+          "Compiling zkApp contract ... (This might take several minutes)"
+        );
+        await zk!.compileContract();
+
+        setStatusMsg(
+          "Creating transaction ... (This might take several minutes)"
+        );
+        const txn = await zk!.createTransaction(publicKey!);
+
+        setStatusMsg("Signing transaction ...");
+        const hash = await signAndSendTransaction(txn.toJSON());
+        setTxnId(hash!);
+
+        setStatusMsg(
+          "Waiting for transaction to be included in a block ... (This might take several minutes)"
+        );
+        await zk!.waitTransaction(txnId!);
+
+        await getValue();
+      } catch (error: any) {
+        console.log("Error:", error.message);
+        alert("Error: " + error.message);
+      } finally {
+        setStatusMsg("");
+        document.body.style.cursor = "";
+        button.style.cursor = "";
+        button.disabled = false;
+      }
+    },
+    [publicKey, signAndSendTransaction, zk]
+  );
+
+  return (
+    <>
+      {chain === MINA_BERKELEY_CHAIN ? (
+        <>
+          {value ? (
+            <p>loading ...</p>
+          ) : (
+            <>
+              <p>
+                <span className="mr-2">
+                  Chain: <strong>{chain}</strong>
+                </span>
+                <span>
+                  On-chain state: <strong>{value}</strong>
+                </span>
+              </p>
+              <p>Click below button to add 2 to the on-chain state.</p>
+              <button
+                className="wallet-adapter-button wallet-adapter-button-trigger"
+                onClick={submit}
+              >
+                Add 2
+              </button>
+              {txnId && <p>Transaction ID: {txnId}</p>}
+              {statusMsg && <p className="warning">{statusMsg}</p>}
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="warning">You are connected to {chain}</p>
+          <p>Switch to Berkeley chain on {name} wallet.</p>
+        </>
+      )}
+    </>
   );
 }

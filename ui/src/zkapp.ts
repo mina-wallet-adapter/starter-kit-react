@@ -1,5 +1,5 @@
 import { Mina, PublicKey, fetchAccount, checkZkappTransaction } from "o1js";
-import { Add } from "../../contracts/src/Add";
+import { Add } from "../../contracts/build/src/Add.js";
 
 const BERKELEY_ENDPOINT = "https://api.minascan.io/node/berkeley/v1/graphql";
 const ZKAPP_CONTRACT_ADDRESS = "B62qkr2pLU4KeNEhc6m3KYDcMFMCbryVoZvXTAnjUkqpbnbWVtz3qxr";
