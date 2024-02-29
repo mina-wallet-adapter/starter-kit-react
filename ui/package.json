@@ -4,14 +4,17 @@
   "private": true,
   "homepage": ".",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
+    "start": "craco start",
+    "build": "craco build",
     "preview": "npx serve -s build",
-    "test": "react-scripts test",
+    "test": "craco test",
     "eject": "react-scripts eject"
   },
   "peerDependencies": {
     "o1js": "0.16.*"
+  },
+  "devDependencies": {
+    "@craco/craco": "^7.1.0"
   },
   "dependencies": {
     "@mina-wallet-adapter/ui-react": "^0.1.1",
