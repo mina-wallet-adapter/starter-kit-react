@@ -1,5 +1,5 @@
 import { Mina, PublicKey, fetchAccount, checkZkappTransaction } from "o1js";
-import { Add } from "../../contracts/build/src/Add.js";
+import { Add } from "../../contracts/src/Add";
 
 const BERKELEY_ENDPOINT = "https://api.minascan.io/node/berkeley/v1/graphql";
 const ZKAPP_CONTRACT_ADDRESS = "B62qkr2pLU4KeNEhc6m3KYDcMFMCbryVoZvXTAnjUkqpbnbWVtz3qxr";
@@ -24,8 +24,45 @@ export async function getOnChainValue() {
 
 export async function compileContract() {
   if (compiled) return;
-  await Add.compile();
+  const cache = await fetchCache();
+  await Add.compile({ cache: handleCache(cache) });
   compiled = true;
+}
+
+async function fetchCache() {
+  const { files } = await fetch("./cache/list.json").then((res) => res.json());
+
+  return Promise.all(
+    files.map(async (file: string) => {
+      const [header, data] = await Promise.all([
+        fetch(`./cache/${file}.header`).then((res) => res.text()),
+        fetch(`./cache/${file}`).then((res) => res.text()),
+      ]);
+      return { file, header, data };
+    })
+  ).then((cacheList) =>
+    cacheList.reduce((acc: any, cur) => {
+      acc[cur.file] = cur;
+      return acc;
+    }, {})
+  );
+}
+
+function handleCache(files: any) {
+  return {
+    read({ persistentId, uniqueId, dataType }: any) {
+      if (!files[persistentId]) return undefined;
+
+      if (files[persistentId].header !== uniqueId) return undefined;
+
+      if (dataType === "string" || dataType === "bytes")
+        return new TextEncoder().encode(files[persistentId].data);
+
+      return undefined;
+    },
+    write({ persistentId, uniqueId, dataType }: never, _data: never) {},
+    canWrite: true,
+  };
 }
 
 export async function createTransaction(publicKey: string) {
